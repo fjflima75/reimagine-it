@@ -112,7 +112,7 @@ function webFontsLink(voice) {
 }
 
 var TOKENS = [
-  'webpage', 'landing', 'dashboard', 'infographic', 'cinematic',
+  'webpage', 'landing', 'dashboard', 'console', 'infographic', 'cinematic',
   'artistic', 'photography', 'svg', '3js', 'simulation',
   'glass', 'editorial', 'motion', 'gradient', 'showcase',
 ];
@@ -121,6 +121,7 @@ var TOKEN_DESCRIPTIONS = {
   webpage: 'Measured editorial page for reading the source',
   landing: 'Product-style page with source-backed actions and features',
   dashboard: 'Operational view built from source facts and counts',
+  console: 'Homelab/ops terminal session — boot line, source log, anchor network map',
   infographic: 'Common-scale poster for dates, facts, and comparisons',
   cinematic: 'Scroll-led narrative with chapters from the source',
   artistic: 'Expressive poster with an anchor-derived visual field',
@@ -612,6 +613,74 @@ function generate(opts) {
     return pageWithPalette(content.title, css, body, dGround, dAccent, dMuted, dSurface, '#e6edf3');
   }
 
+  function consoleTerm() {
+    // A homelab/ops terminal session: window chrome, a boot line, a
+    // timestamped source log (one line per anchor), and an anchor-network
+    // map — distinct from `dashboard`'s KPI-card layout, same source-only
+    // promise. Timestamps are deterministic (seeded per-index), never a
+    // real clock.
+    var tGround = isLight(ground) ? shade(ground, .8) : ground;
+    var tAccent = ensureContrast(tGround, accent, 3);
+    var tMuted = ensureContrast(tGround, muted, 2.5);
+    var tSurface = tint(tGround, .06);
+    var host = String(content.title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'source';
+    var glyphs = glyphTiles(anchors, Math.min(anchors.length, 6), 36);
+    var statCells = metricCards(facts, anchors).slice(0, 3).map(function(metric) {
+      return '<span class="term-stat"><b>' + esc(metric.value) + '</b><small>' + esc(metric.kind) + '</small></span>';
+    }).join('');
+    function logStamp(index) {
+      var h = hashString('log:' + (opts.seed === undefined ? 0 : opts.seed) + ':' + index);
+      var total = 3600 + index * 47 + (h % 53);
+      function pad(n) { return String(n).padStart(2, '0'); }
+      return pad(Math.floor(total / 3600) % 24) + ':' + pad(Math.floor(total / 60) % 60) + ':' + pad(total % 60);
+    }
+    var logLines = anchors.map(function(anchor, index) {
+      var text = sectionParagraphAt(index, anchor);
+      var fact = facts[index] && facts[index].value ? ' <b>' + esc(facts[index].value) + '</b>' : '';
+      return '<li class="log-line" style="--n:' + index + '"><span class="log-time">' + logStamp(index) + '</span><span class="log-tag">' + esc(anchor) + '</span><span class="log-text">' + esc(text) + fact + '</span></li>';
+    }).join('');
+    var css = 'body{font-family:' + mono + ';background:var(--g);color:var(--i)}' +
+      '.term{max-width:900px;margin:0 auto;padding:clamp(28px,6vw,72px) 20px 80px}' +
+      '.term-window{border:1px solid rgba(255,255,255,.14);border-radius:calc(var(--radius) + 6px);overflow:hidden;background:' + tSurface + ';box-shadow:0 40px 80px -48px rgba(0,0,0,.6)}' +
+      '.term-bar{display:flex;align-items:center;gap:10px;padding:14px 18px;background:' + tint(tGround, .1) + ';border-bottom:1px solid rgba(255,255,255,.12);position:relative;overflow:hidden}' +
+      '.term-bar::after{content:"";position:absolute;left:0;right:0;top:0;height:1px;background:linear-gradient(90deg,transparent,' + tAccent + ',transparent);animation:scan-move 5s linear infinite}' +
+      '.dot{width:11px;height:11px;border-radius:50%;flex:0 0 auto}.d1{background:#ff5f56}.d2{background:#ffbd2e}.d3{background:#27c93f}' +
+      '.term-path{margin-left:10px;font:11px ' + mono + ';color:' + tMuted + ';letter-spacing:.02em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '.term-body{padding:clamp(20px,4vw,36px)}' +
+      '.term-boot{font:16px ' + mono + ';color:' + tAccent + ';letter-spacing:-.01em}' +
+      '.cursor{display:inline-block;animation:cursor-blink 1.1s step-end infinite;color:' + tAccent + '}' +
+      '@keyframes cursor-blink{50%{opacity:0}}@keyframes scan-move{from{transform:translateX(-100%)}to{transform:translateX(100%)}}' +
+      '.term-glyphs{margin:18px 0 4px}' +
+      '.term-stats{display:flex;gap:22px;flex-wrap:wrap;margin:22px 0;padding:16px 0;border-top:1px dashed rgba(255,255,255,.14);border-bottom:1px dashed rgba(255,255,255,.14)}' +
+      '.term-stat{display:flex;flex-direction:column;gap:4px}.term-stat b{font:600 22px ' + sans + ';color:' + tAccent + '}.term-stat small{font:10px ' + mono + ';letter-spacing:.12em;text-transform:uppercase;color:' + tMuted + '}' +
+      '.term-log{list-style:none;display:flex;flex-direction:column;gap:10px}' +
+      '.log-line{display:grid;grid-template-columns:64px 120px 1fr;gap:14px;align-items:baseline;font-size:12.5px;line-height:1.6;opacity:0;animation:log-in .5s ease both;animation-delay:calc(var(--n,0)*90ms)}' +
+      '@keyframes log-in{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}' +
+      '.log-time{color:' + tMuted + ';font-variant-numeric:tabular-nums}' +
+      '.log-tag{color:' + tAccent + ';text-transform:uppercase;letter-spacing:.06em;font-size:11px}' +
+      '.log-text{color:color-mix(in srgb,var(--i) 88%,transparent)}' +
+      '.term-map{margin-top:28px;padding-top:22px;border-top:1px dashed rgba(255,255,255,.14)}' +
+      '.term-map-label{display:block;font:10px ' + mono + ';letter-spacing:.14em;text-transform:uppercase;color:' + tMuted + ';margin-bottom:12px}' +
+      '.term-map .constellation{max-width:220px}' +
+      '.term-foot{max-width:900px;margin:18px auto 0;padding:0 20px;display:flex;justify-content:space-between;font:10px ' + mono + ';color:' + tMuted + ';letter-spacing:.08em;text-transform:uppercase}' +
+      '@media(max-width:560px){.log-line{grid-template-columns:1fr;gap:2px}.log-time{order:1}.log-tag{order:2}.log-text{order:3}}' +
+      bandCss + artCss;
+    var body = '<main class="term" aria-label="Session console for ' + esc(content.title) + '">' +
+      '<div class="term-window">' +
+        '<div class="term-bar"><span class="dot d1"></span><span class="dot d2"></span><span class="dot d3"></span><span class="term-path">' + esc(label) + '@' + esc(host) + ':~$</span></div>' +
+        '<div class="term-body">' +
+          '<p class="term-boot">' + esc(content.title) + ' <span class="cursor" aria-hidden="true">_</span></p>' +
+          '<div class="term-glyphs" aria-hidden="true">' + glyphs + '</div>' +
+          (statCells ? '<div class="term-stats" aria-label="Source metrics">' + statCells + '</div>' : '') +
+          '<ol class="term-log" aria-label="Source log">' + logLines + '</ol>' +
+          '<div class="term-map"><span class="term-map-label">Anchor network</span>' + constellation(anchors) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<footer class="term-foot"><span>' + esc(content.title) + '</span><span>' + anchors.length + ' anchors · ' + facts.length + ' facts</span></footer>' +
+      '</main>';
+    return pageWithPalette(content.title, css, body, tGround, tAccent, tMuted, tSurface, isLight(tGround) ? '#10131a' : '#e6edf3');
+  }
+
   function pageWithPalette(title, css, body, customGround, customAccent, customMuted, customSurface, customInk) {
     var saved = { ground: ground, accent: accent, muted: muted, surface: surface, ink: ink };
     ground = customGround; accent = customAccent; muted = customMuted; surface = customSurface; ink = customInk;
@@ -654,6 +723,7 @@ function generate(opts) {
     case 'webpage': return webpage();
     case 'landing': return landing();
     case 'dashboard': return dashboard();
+    case 'console': return consoleTerm();
     case 'infographic': return infographic();
     case 'cinematic': return cinematic();
     case 'artistic': return artistic();
