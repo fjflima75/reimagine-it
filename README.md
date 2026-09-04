@@ -2,6 +2,12 @@
 
 > **The source file is the design brief.** Turn existing HTML into a beautiful, usable page — without losing its meaning.
 
+> Fork of [Kayforkind/reimagine-it](https://github.com/Kayforkind/reimagine-it), tracking upstream `main`.
+> Consumed as an in-process dependency (`src/extract`, `src/auto`) by the **Reimagine** tab of
+> [Titan](https://github.com/fjflima75/titan), the user's homelab dashboard — paste or upload HTML there
+> and it calls `extractContent` + `autoGenerate` directly, no CLI subprocess, no CDN. See
+> `app/app/api/reimagine/route.ts` in that repo for the integration.
+
 [![CI](https://img.shields.io/github/actions/workflow/status/Kayforkind/reimagine-it/audit.yml?branch=main&label=CI&logo=github)](https://github.com/Kayforkind/reimagine-it/actions/workflows/audit.yml)
 [![Benchmark](https://img.shields.io/github/actions/workflow/status/Kayforkind/reimagine-it/benchmark.yml?branch=main&label=benchmark%20100%2F100)](https://github.com/Kayforkind/reimagine-it/actions/workflows/benchmark.yml)
 [![Design Health](https://img.shields.io/github/actions/workflow/status/Kayforkind/design-health-action/audit.yml?branch=main&label=Design%20Health&logo=github)](https://github.com/Kayforkind/design-health-action/actions/workflows/audit.yml)
